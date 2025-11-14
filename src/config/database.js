@@ -1,49 +1,35 @@
-import Database from 'better-sqlite3'
-import path from 'path'
-import { fileURLToPath } from 'url'
+import Database from 'better-sqlite3';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import config from './config.js';
 
-// Get current directory (needed for ES modules)
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Create/connect to database file
-// This will create 'database.sqlite' in your project root
-const dbPath = path.join(__dirname, '../../database.sqlite')
-const db = new Database(dbPath)
+const dbPath = path.isAbsolute(config.databaseUrl)
+  ? config.databaseUrl
+  : path.join(__dirname, '../../', config.databaseUrl);
 
-// Enable foreign keys (important for relational data)
-db.pragma('foreign_keys = ON')
+console.log(`📊 Database path: ${dbPath}`);
 
-// Function to initialize database tables
-export const initializeDatabase = () => {
-  // Create users table if it doesn't exist
-  const createUsersTable = `
-    CREATE TABLE IF NOT EXISTS users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT NOT NULL,
-      email TEXT UNIQUE,
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    )
-  `
+const db = new Database(dbPath);
+db.pragma('foreign_keys = ON');
 
-  db.exec(createUsersTable)
-  console.log('✅ Database initialized')
-
-  // Optional: Add sample data if table is empty
-  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get()
-
-  if (userCount.count === 0) {
-    console.log('📝 Adding sample data...')
-    const insert = db.prepare('INSERT INTO users (name, email) VALUES (?, ?)')
-
-    insert.run('Alice', 'alice@example.com')
-    insert.run('Bob', 'bob@example.com')
-    insert.run('Charlie', 'charlie@example.com')
-    insert.run('Dave', 'dave@example.com')
-
-    console.log('✅ Sample data added')
+export const initializeDatabase = async () => {
+  console.log('🔧 Initializing database...');
+  
+  const User = (await import('../models/User.js')).default;
+  const Song = (await import('../models/Song.js')).default;
+  
+  User.createTable();
+  Song.createTable();
+  
+  if (config.isDevelopment()) {
+    User.seed();
+    Song.seed();
   }
-}
+  
+  console.log('✅ Database initialization complete');
+};
 
-// Export the database instance as default
-export default db
+export default db;

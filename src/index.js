@@ -4,6 +4,7 @@ import { initializeDatabase } from './config/database.js';
 import logMiddleware from './middleware/logger.js';
 import { validateApiKey } from './middleware/apiKey.js';
 import userRoutes from './routes/userRoutes.js';
+import songRoutes from './routes/songRoutes.js';
 
 const app = express();
 
@@ -22,7 +23,8 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     environment: config.nodeEnv,
     endpoints: {
-      users: '/users'
+      users: '/users',
+      songs: '/songs'
     }
   });
 });
@@ -37,6 +39,7 @@ app.get('/health', (req, res) => {
 
 // Protected routes
 app.use('/users', validateApiKey, userRoutes);
+app.use('/songs', validateApiKey, songRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -68,6 +71,12 @@ app.listen(config.port, () => {
   console.log('  POST   /users      - Create user (protected)');
   console.log('  PUT    /users/:id  - Update user (protected)');
   console.log('  DELETE /users/:id  - Delete user (protected)');
+  console.log('  GET    /songs      - List songs (protected)');
+  console.log('  GET    /songs/search?artist=NAME - Search by artist (protected)');
+  console.log('  GET    /songs/:id  - Get song (protected)');
+  console.log('  POST   /songs      - Create song (protected)');
+  console.log('  PUT    /songs/:id  - Update song (protected)');
+  console.log('  DELETE /songs/:id  - Delete song (protected)');
 });
 
 export default app;
