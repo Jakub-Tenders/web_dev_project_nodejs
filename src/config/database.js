@@ -1,68 +1,49 @@
-import initSqlJs from 'sql.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
-import config from './config.js';
+import Database from 'better-sqlite3'
+import path from 'path'
+import { fileURLToPath } from 'url'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Get current directory (needed for ES modules)
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-const dbPath = path.isAbsolute(config.databaseUrl)
-  ? config.databaseUrl
-  : path.join(__dirname, '../../', config.databaseUrl);
+// Create/connect to database file
+// This will create 'database.sqlite' in your project root
+const dbPath = path.join(__dirname, '../../database.sqlite')
+const db = new Database(dbPath)
 
-console.log(`Database path: ${dbPath}`);
+// Enable foreign keys (important for relational data)
+db.pragma('foreign_keys = ON')
 
-let db;
-let SQL;
+// Function to initialize database tables
+export const initializeDatabase = () => {
+  // Create users table if it doesn't exist
+  const createUsersTable = `
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      email TEXT UNIQUE,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `
 
-// Initialize SQL.js and database
-async function initDb() {
-  if (!SQL) {
-    SQL = await initSqlJs();
+  db.exec(createUsersTable)
+  console.log('✅ Database initialized')
+
+  // Optional: Add sample data if table is empty
+  const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get()
+
+  if (userCount.count === 0) {
+    console.log('📝 Adding sample data...')
+    const insert = db.prepare('INSERT INTO users (name, email) VALUES (?, ?)')
+
+    insert.run('Alice', 'alice@example.com')
+    insert.run('Bob', 'bob@example.com')
+    insert.run('Charlie', 'charlie@example.com')
+    insert.run('Dave', 'dave@example.com')
+
+    console.log('✅ Sample data added')
   }
-  if (!db) {
-    if (existsSync(dbPath)) {
-      const buffer = readFileSync(dbPath);
-      db = new SQL.Database(buffer);
-    } else {
-      db = new SQL.Database();
-    }
-  }
-  return db;
 }
 
-// Save database to file
-export const saveDatabase = () => {
-  const dir = path.dirname(dbPath);
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-
-  const data = db.export();
-  const buffer = Buffer.from(data);
-  writeFileSync(dbPath, buffer);
-};
-
-export const initializeDatabase = async () => {
-  console.log('Initializing database...');
-  await initDb();
-
-  const User = (await import('../models/User.js')).default;
-
-  User.createTable();
-  saveDatabase();
-
-  if (config.isDevelopment()) {
-    User.seed();
-    saveDatabase();
-  }
-
-  console.log('Database initialization complete');
-};
-
-// Export a getter function
-export const getDatabase = () => db;
-
-// Backward compatibility
-export default { get db() { return db; } };
+// Export the database instance as default
+export default db

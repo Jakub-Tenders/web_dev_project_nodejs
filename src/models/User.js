@@ -1,10 +1,10 @@
-import dbModule, { saveDatabase } from '../config/database.js';
+import db from '../config/database.js';
 
 class User {
   static tableName = 'users';
 
-  static get db() {
-    return dbModule.db;
+  static get dbInstance() {
+    return db;
   }
 
   static createTable() {
@@ -17,69 +17,43 @@ class User {
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `;
-    this.db.exec(sql);
+    this.dbInstance.exec(sql);
     console.log(`Table '${this.tableName}' created/verified`);
   }
 
   static findAll() {
-    const stmt = this.db.prepare(`SELECT * FROM ${this.tableName} ORDER BY id`);
-    stmt.bind();
-    const rows = [];
-    while (stmt.step()) {
-      const row = stmt.getAsObject();
-      rows.push(row);
-    }
-    stmt.free();
-    return rows;
+    const stmt = this.dbInstance.prepare(`SELECT * FROM ${this.tableName} ORDER BY id`);
+    return stmt.all(); // returns all rows as array of objects
   }
 
   static findById(id) {
-    const stmt = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE id = ?`);
-    stmt.bind([id]);
-    const row = stmt.step() ? stmt.getAsObject() : null;
-    stmt.free();
-    return row;
+    const stmt = this.dbInstance.prepare(`SELECT * FROM ${this.tableName} WHERE id = ?`);
+    return stmt.get(id) || null;
   }
 
   static findByEmail(email) {
-    const stmt = this.db.prepare(`SELECT * FROM ${this.tableName} WHERE email = ?`);
-    stmt.bind([email]);
-    const row = stmt.step() ? stmt.getAsObject() : null;
-    stmt.free();
-    return row;
+    const stmt = this.dbInstance.prepare(`SELECT * FROM ${this.tableName} WHERE email = ?`);
+    return stmt.get(email) || null;
   }
 
   static emailExists(email, excludeId = null) {
     if (!email) return false;
     let stmt;
     if (excludeId) {
-      stmt = this.db.prepare(`SELECT id FROM ${this.tableName} WHERE email = ? AND id != ?`);
-      stmt.bind([email, excludeId]);
+      stmt = this.dbInstance.prepare(`SELECT id FROM ${this.tableName} WHERE email = ? AND id != ?`);
+      return !!stmt.get(email, excludeId);
     } else {
-      stmt = this.db.prepare(`SELECT id FROM ${this.tableName} WHERE email = ?`);
-      stmt.bind([email]);
+      stmt = this.dbInstance.prepare(`SELECT id FROM ${this.tableName} WHERE email = ?`);
+      return !!stmt.get(email);
     }
-    const exists = stmt.step();
-    stmt.free();
-    return exists;
   }
 
   static create({ name, email }) {
-    const stmt = this.db.prepare(
+    const stmt = this.dbInstance.prepare(
       `INSERT INTO ${this.tableName} (name, email) VALUES (?, ?)`
     );
-    stmt.bind([name, email || null]);
-    stmt.step();
-    stmt.free();
-
-    const idStmt = this.db.prepare("SELECT last_insert_rowid() as id");
-    idStmt.bind();
-    idStmt.step();
-    const lastId = idStmt.getAsObject().id;
-    idStmt.free();
-
-    saveDatabase();
-    return this.findById(lastId);
+    const info = stmt.run(name, email || null);
+    return this.findById(info.lastInsertRowid);
   }
 
   static update(id, { name, email }) {
@@ -94,47 +68,25 @@ class User {
       values.push(email);
     }
     updates.push('updated_at = CURRENT_TIMESTAMP');
+    if (updates.length === 1) return this.findById(id); // nothing to update
 
-    if (updates.length === 1) {
-      return this.findById(id);
-    }
     values.push(id);
-    const stmt = this.db.prepare(
+    const stmt = this.dbInstance.prepare(
       `UPDATE ${this.tableName} SET ${updates.join(', ')} WHERE id = ?`
     );
-    stmt.bind(values);
-    stmt.step();
-    stmt.free();
-    saveDatabase();
+    stmt.run(...values);
     return this.findById(id);
   }
 
   static delete(id) {
-    const stmt = this.db.prepare(
-      `DELETE FROM ${this.tableName} WHERE id = ?`
-    );
-    stmt.bind([id]);
-    stmt.step();
-    stmt.free();
-
-    const changesStmt = this.db.prepare("SELECT changes() as changes");
-    changesStmt.bind();
-    changesStmt.step();
-    const changes = changesStmt.getAsObject().changes;
-    changesStmt.free();
-    saveDatabase();
-    return changes > 0;
+    const stmt = this.dbInstance.prepare(`DELETE FROM ${this.tableName} WHERE id = ?`);
+    const info = stmt.run(id);
+    return info.changes > 0;
   }
 
   static count() {
-    const stmt = this.db.prepare(
-      `SELECT COUNT(*) AS count FROM ${this.tableName}`
-    );
-    stmt.bind();
-    stmt.step();
-    const count = stmt.getAsObject().count;
-    stmt.free();
-    return count;
+    const stmt = this.dbInstance.prepare(`SELECT COUNT(*) AS count FROM ${this.tableName}`);
+    return stmt.get().count;
   }
 
   static seed() {
