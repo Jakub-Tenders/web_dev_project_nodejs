@@ -234,24 +234,28 @@
 
     <script>
     const API_URL = window.location.origin;
-    let apiKey = localStorage.getItem('apiKey') || ''; // Load saved key
+
+    
+    let apiKey = localStorage.getItem('apiKey') || '';
     let userModal, songModal;
 
+    
     document.addEventListener('DOMContentLoaded', () => {
         const input = document.getElementById('apiKeyInput');
-        input.value = apiKey; // populate field
+        input.value = apiKey; 
         userModal = new bootstrap.Modal(document.getElementById('userModal'));
         songModal = new bootstrap.Modal(document.getElementById('songModal'));
         loadAll();
     });
 
+    
     function getHeaders() {
         const input = document.getElementById('apiKeyInput');
-        apiKey = input.value.trim();
-        localStorage.setItem('apiKey', apiKey); // remember for future visits
+        apiKey = input.value.trim();           // just assign, no let/const
+        localStorage.setItem('apiKey', apiKey); // save for next time
         return {
             'Content-Type': 'application/json',
-            'X-API-Key': apiKey // match your server middleware
+            'X-API-Key': apiKey                 // middleware reads this
         };
     }
 
