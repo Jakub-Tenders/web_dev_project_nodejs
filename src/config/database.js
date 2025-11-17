@@ -29,12 +29,12 @@ export const initializeDatabase = async () => {
   User.createTable();
   Song.createTable();
 
-  if (config.isDevelopment()) {
-    User.seed();
-    Song.seed();
-  }
+
+User.seed();
+Song.seed();
 
   console.log('✅ Database initialization complete');
 };
+
 
 export default db;
