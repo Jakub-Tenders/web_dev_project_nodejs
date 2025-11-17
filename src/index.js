@@ -64,11 +64,6 @@ app.listen(config.port, () => {
   console.log('\nAPI Endpoints:');
   console.log('  GET    /           - Welcome (public)');
   console.log('  GET    /health     - Health (public)');
-  console.log('  GET    /users      - List users (protected)');
-  console.log('  GET    /users/:id  - Get user (protected)');
-  console.log('  POST   /users      - Create user (protected)');
-  console.log('  PUT    /users/:id  - Update user (protected)');
-  console.log('  DELETE /users/:id  - Delete user (protected)');
   console.log('  GET    /songs      - List songs (protected)');
   console.log('  GET    /songs/search?artist=NAME - Search by artist (protected)');
   console.log('  GET    /songs/:id  - Get song (protected)');

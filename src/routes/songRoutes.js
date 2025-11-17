@@ -1,9 +1,10 @@
 import express from 'express';
 import * as songController from '../controllers/songController.js';
+import { logMiddleware } from "../middleware/logger.js"
 
 const router = express.Router();
 
-router.get('/', songController.getAllSongs);
+router.get("/", logMiddleware, songController.getAllSongs)
 router.get('/search', songController.getSongsByArtist);
 router.get('/:id', songController.getSongById);
 router.post('/', songController.createSong);

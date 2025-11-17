@@ -1,9 +1,8 @@
 import config from '../config/config.js';
 
 export const validateApiKey = (req, res, next) => {
-  const headerKey = req.headers['x-api-key'];
-  const bearer = req.headers['authorization']?.replace(/^Bearer\s+/i, '');
-  const apiKey = headerKey || bearer;
+	const apiKey = req.headers['x-api-key'] || 
+	               req.headers['authorization']?.replace('Bearer ', '')
 
   if (!apiKey) {
     return res.status(401).json({
