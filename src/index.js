@@ -37,6 +37,16 @@ app.get('/', (req, res) => {
 	})
 })
 
+app.get('/', (req, res) => {
+	res.json({ 
+		message: "Welcome to the Songs API",
+		version: "1.0.0",
+		environment: config.nodeEnv,
+		endpoints: {
+			songs: "/songs"
+		}
+	})
+})
 
 app.get('/health', (req, res) => {
   res.json({
