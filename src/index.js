@@ -26,6 +26,16 @@ app.use(logMiddleware);
 app.use(express.static('public'));
 
 
+app.get('/', (req, res) => {
+	res.json({ 
+		message: "Welcome to the Songs API",
+		version: "1.0.0",
+		environment: config.nodeEnv,
+		endpoints: {
+			songs: "/songs"
+		}
+	})
+})
 
 
 app.get('/health', (req, res) => {
