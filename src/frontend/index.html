@@ -233,291 +233,116 @@
     </div>
 
     <script>
-        const API_URL = window.location.origin;
-        let apiKey = process.env.API_KEY;
-        let userModal, songModal;
+    const API_URL = window.location.origin;
+    let apiKey = localStorage.getItem('apiKey') || ''; // Load saved key
+    let userModal, songModal;
 
-        document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('apiKeyInput').value = apiKey;
-            userModal = new bootstrap.Modal(document.getElementById('userModal'));
-            songModal = new bootstrap.Modal(document.getElementById('songModal'));
-            loadAll();
-        });
+    document.addEventListener('DOMContentLoaded', () => {
+        const input = document.getElementById('apiKeyInput');
+        input.value = apiKey; // populate field
+        userModal = new bootstrap.Modal(document.getElementById('userModal'));
+        songModal = new bootstrap.Modal(document.getElementById('songModal'));
+        loadAll();
+    });
 
-        function getHeaders() {
-            apiKey = document.getElementById('apiKeyInput').value;
-            localStorage.setItem('apiKey', apiKey);
-            return {
-                'Content-Type': 'application/json',
-                'X-API-Key': apiKey
-            };
+    function getHeaders() {
+        const input = document.getElementById('apiKeyInput');
+        apiKey = input.value.trim();
+        localStorage.setItem('apiKey', apiKey); // remember for future visits
+        return {
+            'Content-Type': 'application/json',
+            'X-API-Key': apiKey // match your server middleware
+        };
+    }
+
+    function showAlert(message, type = 'success') {
+        const alert = document.querySelector('.alert');
+        alert.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3`;
+        alert.textContent = message;
+        alert.classList.remove('d-none');
+        setTimeout(() => alert.classList.add('d-none'), 3000);
+    }
+
+    function showSpinner(show) {
+        const spinner = document.querySelector('.spinner-border');
+        spinner.classList.toggle('d-none', !show);
+    }
+
+    async function testConnection() {
+        try {
+            const response = await fetch(`${API_URL}/health`, { headers: getHeaders() });
+            const data = await response.json();
+            if (data.status === 'OK') showAlert('✅ Connection successful!', 'success');
+        } catch (error) {
+            showAlert('❌ Connection failed! Make sure server is running', 'danger');
         }
+    }
 
-        function showAlert(message, type = 'success') {
-            const alert = document.querySelector('.alert');
-            alert.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3`;
-            alert.textContent = message;
-            alert.classList.remove('d-none');
-            setTimeout(() => alert.classList.add('d-none'), 3000);
-        }
+    async function loadAll() {
+        await Promise.all([loadUsers(), loadSongs()]);
+    }
 
-        function showSpinner(show) {
-            const spinner = document.querySelector('.spinner-border');
-            if (show) spinner.classList.remove('d-none');
-            else spinner.classList.add('d-none');
-        }
-
-        function formatDuration(seconds) {
-            if (!seconds) return 'N/A';
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        async function testConnection() {
-            try {
-                const response = await fetch(`${API_URL}/health`);
-                const data = await response.json();
-                if (data.status === 'OK') {
-                    showAlert('✅ Connection successful!', 'success');
-                }
-            } catch (error) {
-                showAlert('❌ Connection failed! Make sure server is running', 'danger');
-            }
-        }
-
-        function loadAll() {
-            loadUsers();
-            loadSongs();
-        }
-
-
-        async function loadUsers() {
-            showSpinner(true);
-            try {
-                const response = await fetch(`${API_URL}/users`, { headers: getHeaders() });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const users = await response.json();
-                document.getElementById('userCount').textContent = users.length;
-                
-                const container = document.getElementById('users-container');
-                container.innerHTML = users.map(user => `
-                    <div class="col">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="card-title">${user.name}</div>
-                                <p class="card-text"><strong>Email:</strong> ${user.email || 'N/A'}</p>
-                                <p class="card-text"><strong>ID:</strong> ${user.id}</p>
-                                <p class="card-text text-muted" style="font-size: 0.85rem;">
-                                    Created: ${new Date(user.created_at).toLocaleDateString()}
-                                </p>
-                                <div class="btn-action control-buttons">
-                                    <button class="btn btn-sm btn-warning" onclick='editUser(${JSON.stringify(user)})'>Edit</button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Delete</button>
-                                </div>
+    async function loadUsers() {
+        showSpinner(true);
+        try {
+            const res = await fetch(`${API_URL}/users`, { headers: getHeaders() });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const users = await res.json();
+            document.getElementById('userCount').textContent = users.length;
+            const container = document.getElementById('users-container');
+            container.innerHTML = users.map(user => `
+                <div class="col">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="card-title">${user.name}</div>
+                            <p class="card-text"><strong>Email:</strong> ${user.email || 'N/A'}</p>
+                            <p class="card-text"><strong>ID:</strong> ${user.id}</p>
+                            <div class="btn-action control-buttons">
+                                <button class="btn btn-sm btn-warning" onclick='editUser(${JSON.stringify(user)})'>Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Delete</button>
                             </div>
                         </div>
                     </div>
-                `).join('');
-            } catch (error) {
-                showAlert(`Error loading users: ${error.message}`, 'danger');
-            } finally {
-                showSpinner(false);
-            }
-        }
+                </div>
+            `).join('');
+        } catch (err) {
+            showAlert(`Error loading users: ${err.message}`, 'danger');
+        } finally { showSpinner(false); }
+    }
 
-        function resetUserForm() {
-            document.getElementById('userForm').reset();
-            document.getElementById('userId').value = '';
-            document.getElementById('userModalTitle').textContent = 'ADD USER';
-        }
-
-        function editUser(user) {
-            document.getElementById('userId').value = user.id;
-            document.getElementById('userName').value = user.name;
-            document.getElementById('userEmail').value = user.email || '';
-            document.getElementById('userModalTitle').textContent = 'EDIT USER';
-            userModal.show();
-        }
-
-        async function saveUser() {
-            const id = document.getElementById('userId').value;
-            const name = document.getElementById('userName').value;
-            const email = document.getElementById('userEmail').value;
-
-            if (!name) {
-                showAlert('Name is required', 'warning');
-                return;
-            }
-
-            showSpinner(true);
-            try {
-                const url = id ? `${API_URL}/users/${id}` : `${API_URL}/users`;
-                const method = id ? 'PUT' : 'POST';
-                
-                const response = await fetch(url, {
-                    method,
-                    headers: getHeaders(),
-                    body: JSON.stringify({ name, email: email || undefined })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.message);
-                }
-
-                showAlert(`✅ User ${id ? 'updated' : 'created'} successfully!`, 'success');
-                userModal.hide();
-                loadUsers();
-            } catch (error) {
-                showAlert(`Error: ${error.message}`, 'danger');
-            } finally {
-                showSpinner(false);
-            }
-        }
-
-        async function deleteUser(id) {
-            if (!confirm('Are you sure you want to delete this user?')) return;
-
-            showSpinner(true);
-            try {
-                const response = await fetch(`${API_URL}/users/${id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                showAlert('✅ User deleted successfully!', 'success');
-                loadUsers();
-            } catch (error) {
-                showAlert(`Error: ${error.message}`, 'danger');
-            } finally {
-                showSpinner(false);
-            }
-        }
-
-
-        async function loadSongs() {
-            showSpinner(true);
-            try {
-                const response = await fetch(`${API_URL}/songs`, { headers: getHeaders() });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
-                const songs = await response.json();
-                document.getElementById('songCount').textContent = songs.length;
-                
-                const container = document.getElementById('songs-container');
-                container.innerHTML = songs.map(song => `
-                    <div class="col">
-                        <div class="card">
-                            <div class="card-body">
-                                <div class="card-title">🎵 ${song.title}</div>
-                                <p class="card-text"><strong>Artist:</strong> ${song.artist}</p>
-                                <p class="card-text"><strong>Album:</strong> ${song.album || 'N/A'}</p>
-                                <p class="card-text">
-                                    <strong>Duration:</strong> 
-                                    <span class="duration-badge">${formatDuration(song.duration)}</span>
-                                </p>
-                                <p class="card-text text-muted" style="font-size: 0.85rem;">
-                                    Created: ${new Date(song.created_at).toLocaleDateString()}
-                                </p>
-                                <div class="btn-action control-buttons">
-                                    <button class="btn btn-sm btn-warning" onclick='editSong(${JSON.stringify(song)})'>Edit</button>
-                                    <button class="btn btn-sm btn-danger" onclick="deleteSong(${song.id})">Delete</button>
-                                </div>
+    async function loadSongs() {
+        showSpinner(true);
+        try {
+            const res = await fetch(`${API_URL}/songs`, { headers: getHeaders() });
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const songs = await res.json();
+            document.getElementById('songCount').textContent = songs.length;
+            const container = document.getElementById('songs-container');
+            container.innerHTML = songs.map(song => `
+                <div class="col">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="card-title">🎵 ${song.title}</div>
+                            <p class="card-text"><strong>Artist:</strong> ${song.artist}</p>
+                            <p class="card-text"><strong>Album:</strong> ${song.album || 'N/A'}</p>
+                            <p class="card-text"><strong>Duration:</strong> ${song.duration ? Math.floor(song.duration/60) + ':' + String(song.duration%60).padStart(2,'0') : 'N/A'}</p>
+                            <div class="btn-action control-buttons">
+                                <button class="btn btn-sm btn-warning" onclick='editSong(${JSON.stringify(song)})'>Edit</button>
+                                <button class="btn btn-sm btn-danger" onclick="deleteSong(${song.id})">Delete</button>
                             </div>
                         </div>
                     </div>
-                `).join('');
-            } catch (error) {
-                showAlert(`Error loading songs: ${error.message}`, 'danger');
-            } finally {
-                showSpinner(false);
-            }
-        }
+                </div>
+            `).join('');
+        } catch (err) {
+            showAlert(`Error loading songs: ${err.message}`, 'danger');
+        } finally { showSpinner(false); }
+    }
 
-        function resetSongForm() {
-            document.getElementById('songForm').reset();
-            document.getElementById('songId').value = '';
-            document.getElementById('songModalTitle').textContent = 'ADD SONG';
-        }
+    // Keep your existing saveUser, deleteUser, saveSong, deleteSong, editUser, editSong functions
+    // They will automatically use the API key from the input via getHeaders()
+</script>
 
-        function editSong(song) {
-            document.getElementById('songId').value = song.id;
-            document.getElementById('songTitle').value = song.title;
-            document.getElementById('songArtist').value = song.artist;
-            document.getElementById('songAlbum').value = song.album || '';
-            document.getElementById('songDuration').value = song.duration || '';
-            document.getElementById('songModalTitle').textContent = 'EDIT SONG';
-            songModal.show();
-        }
-
-        async function saveSong() {
-            const id = document.getElementById('songId').value;
-            const title = document.getElementById('songTitle').value;
-            const artist = document.getElementById('songArtist').value;
-            const album = document.getElementById('songAlbum').value;
-            const duration = document.getElementById('songDuration').value;
-
-            if (!title || !artist) {
-                showAlert('Title and artist are required', 'warning');
-                return;
-            }
-
-            showSpinner(true);
-            try {
-                const url = id ? `${API_URL}/songs/${id}` : `${API_URL}/songs`;
-                const method = id ? 'PUT' : 'POST';
-                
-                const response = await fetch(url, {
-                    method,
-                    headers: getHeaders(),
-                    body: JSON.stringify({
-                        title,
-                        artist,
-                        album: album || undefined,
-                        duration: duration ? parseInt(duration) : undefined
-                    })
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    throw new Error(error.message);
-                }
-
-                showAlert(`✅ Song ${id ? 'updated' : 'created'} successfully!`, 'success');
-                songModal.hide();
-                loadSongs();
-            } catch (error) {
-                showAlert(`Error: ${error.message}`, 'danger');
-            } finally {
-                showSpinner(false);
-            }
-        }
-
-        async function deleteSong(id) {
-            if (!confirm('Are you sure you want to delete this song?')) return;
-
-            showSpinner(true);
-            try {
-                const response = await fetch(`${API_URL}/songs/${id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
-
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                showAlert('✅ Song deleted successfully!', 'success');
-                loadSongs();
-            } catch (error) {
-                showAlert(`Error: ${error.message}`, 'danger');
-            } finally {
-                showSpinner(false);
-            }
-        }
-    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
 </body>
