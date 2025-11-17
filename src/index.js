@@ -10,11 +10,6 @@ import songRoutes from './routes/songRoutes.js';
 
 const app = express();
 
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-
 await initializeDatabase();
 
 
@@ -22,20 +17,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(logMiddleware);
 
-// Serve static files from public directory
-app.use(express.static('public'));
 
-
-app.get('/', (req, res) => {
-	res.json({ 
-		message: "Welcome to the Songs API",
-		version: "1.0.0",
-		environment: config.nodeEnv,
-		endpoints: {
-			songs: "/songs"
-		}
-	})
-})
 
 app.get('/', (req, res) => {
 	res.json({ 
@@ -57,7 +39,7 @@ app.get('/health', (req, res) => {
 });
 
 
-app.use('/users', validateApiKey, userRoutes);
+
 app.use('/songs', validateApiKey, songRoutes);
 
 
