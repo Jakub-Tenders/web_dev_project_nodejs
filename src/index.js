@@ -22,8 +22,8 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(logMiddleware);
 
-
-app.use(express.static(path.join(__dirname, "frontend")));
+// Serve static files from public directory
+app.use(express.static('public'));
 
 
 
