@@ -1,11 +1,8 @@
 import express from 'express';
-import path from "path";
-import { fileURLToPath } from "url";
 import config from './config/config.js';
 import { initializeDatabase } from './config/database.js';
 import logMiddleware from './middleware/logger.js';
 import { validateApiKey } from './middleware/apiKey.js';
-import userRoutes from './routes/userRoutes.js';
 import songRoutes from './routes/songRoutes.js';
 
 const app = express();
