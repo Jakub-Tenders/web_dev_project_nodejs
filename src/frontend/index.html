@@ -234,7 +234,7 @@
 
     <script>
         const API_URL = window.location.origin;
-        let apiKey = localStorage.getItem('apiKey') || 'student-api-secret-key-2024';
+        let apiKey = process.env.API_KEY;
         let userModal, songModal;
 
         document.addEventListener('DOMContentLoaded', () => {
