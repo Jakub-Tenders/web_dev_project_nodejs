@@ -233,31 +233,59 @@
     </div>
 
     <script>
-    const API_URL = window.location.origin;
+        const API_BASE_URL = window.location.origin;
+        let currentApiKey = localStorage.getItem('apiKey') || '';
 
-    
-    let apiKey = localStorage.getItem('apiKey') || '';
-    let userModal, songModal;
+        // Load API key from localStorage on page load
+        if (currentApiKey) {
+            document.getElementById('apiKeyInput').value = currentApiKey;
+            loadUsers();
+            loadVideoGames();
+        }
 
-    
-    document.addEventListener('DOMContentLoaded', () => {
-        const input = document.getElementById('apiKeyInput');
-        input.value = apiKey; 
-        userModal = new bootstrap.Modal(document.getElementById('userModal'));
-        songModal = new bootstrap.Modal(document.getElementById('songModal'));
-        loadAll();
-    });
+        function saveApiKey() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            if (!apiKey) {
+                showStatus('apiKeyStatus', 'Please enter an API key', 'error');
+                return;
+            }
+            currentApiKey = apiKey;
+            localStorage.setItem('apiKey', apiKey);
+            showStatus('apiKeyStatus', 'API key saved successfully!', 'success');
+            loadUsers();
+            loadVideoGames();
+        }
 
-    
-    function getHeaders() {
-        const input = document.getElementById('apiKeyInput');
-        apiKey = input.value.trim();           // just assign, no let/const
-        localStorage.setItem('apiKey', apiKey); // save for next time
-        return {
-            'Content-Type': 'application/json',
-            'X-API-Key': apiKey                 // middleware reads this
-        };
-    }
+        function showStatus(elementId, message, type) {
+            const statusEl = document.getElementById(elementId);
+            statusEl.textContent = message;
+            statusEl.className = `status-message ${type}`;
+            statusEl.style.display = 'block';
+            setTimeout(() => {
+                statusEl.style.display = 'none';
+            }, 3000);
+        }
+
+        async function fetchWithAuth(url, options = {}) {
+            if (!currentApiKey) {
+                throw new Error('API key not set. Please configure your API key first.');
+            }
+
+            const headers = {
+                'X-API-Key': currentApiKey,
+                'Content-Type': 'application/json',
+                ...options.headers
+            };
+
+            const response = await fetch(url, { ...options, headers });
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ error: 'Request failed' }));
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+
+            return response.json();
+        }
 
     function showAlert(message, type = 'success') {
         const alert = document.querySelector('.alert');
