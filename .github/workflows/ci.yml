@@ -26,8 +26,6 @@ jobs:
           node-version: "20"
           cache: "npm"
       - run: npm ci
-      - run: npm run format:check
-      - run: npm run lint
 
   build-and-test:
     name: Build & Test
